@@ -65,13 +65,46 @@ use position-sensitive segmentation to generate text segmentation maps(inspired 
 输出：
 本文利用一个全卷积神经网络继续输出语义信息将之前的features of f34789 分别扩大１２４８16 倍使其和f3相同一起输出为inputimage.shape×（２×２），其中(2×2)代表属于哪部分（top-left.....)
 <span id = "network"></span>
+# 4.Training And Detail
+## 4.1 Training
+定义 x 坐标左边比右边小，定义 y 坐标上边比下边大。
+定义原先的$$$ box R = \{P_i | i 属于\{1,2,3,4\}\} 则P_i 就是（x_i,y_i)所代表的position-segmentation $$$
+## 4.2 optimization
+loss function:
+$$$ L = \frac 1 N_c L_{conf} + \frac{t_1}{N_c} L_{loc} + \frac{t_2}{N_s} L_{seg}  $$$
+$$$ L_{conf} 置信度分支的loss, L_{loc} 是相对位置偏移的loss,L_{seg} 是语义分割的loss. N_c 是anchor\ boxes 的数目，N_s 是语义分割图中像素的个数，t_1,t_2是权衡三个loss的超参数，本文设置为1,10 $$$
+其中：
+$$$ L_{conf} = CrossEntropy(y_c,p_c), y_c\ is\ the\ ground\ truth\ of\ all\ anchor\ boxes取（1,0），p_c\ is\ predicted\ scores $$$
 
-
-
-
-
-
-
+$$$ L_{loc} = SmoothL1(y_1,p_1),对于回归问题smooth L1\ loss让loss对于离群点更加鲁棒，相比于L2损失函数，其对离群点、异常值（outlier）不敏感，可控制梯度的量级使训练时不容易跑飞。 $$$
+![pic5](./pic5.png)
+## 4.3 Sampling and Grouping
+NMS
+长方形可有两个点和一条垂直的边确定
+长方形的规则筛选
+最短的短边不能大于一个阔值，本文默认是５
+预测的长的短边不能比短的短边大1.5倍
+## 4.4 Scoring
+![pic6](./pic6.png)
+如上图所示，我们已经预测出了box
+将ｂｏｘ分成 2×2 的４个position-segmentation,若我们预测的像素点颜色和通过ｂｏｘ分割的应该是的颜色相同则这部分像素点就是我们需要的,通过这种方法的到的所有像素点加起来/4取平均值/bin（小框）的大小来预测这个box的最终得分，即我们的预测。
+# 5.Experiments
+## 5.1 Result
+### Good
+![pic10](./pic10.png)
+### Bad
+![pic14](./pic14.png)
+![pic7](./pic7.png)
+## 5.3 Detecting Oriented Text
+![pic8](./pic8.png)
+## 5.4 Detecting Horizontal Text
+![pic9](./pic9.png)
+## 5.5 Detecting Long Oriented Text Line
+![pic11](./pic11.png)
+## 5.6 Detecting Multi-Lingual Text
+![pic12](./pic12.png)
+## 5.6 Generalization Ability
+![pic13](./pic13.png)
 ## 背景
 ### <span id = "FNP">FNP</span>
 >In Computer Vision中,利用不同尺度来做目标识别一直是个大坑(fundamental challenge)。
